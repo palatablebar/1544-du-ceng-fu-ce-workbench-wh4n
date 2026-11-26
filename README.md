@@ -12,8 +12,11 @@ docker compose up -d --build
 
 ```sh
 docker compose exec -T app python -m platebath.entry evaluate --capacity 8 --strategy focus
+docker compose exec -T app python -m platebath.entry acceptance --feed sample_data/acceptance_feed_sample.json
 docker compose exec -T app pytest -q
 docker compose down --remove-orphans
 ```
+
+签认后的漏判验收在「漏判验收」环节查看：晚到实绩只作验收标签，训练与派单按签发可见单据重跑防泄漏；同版冲突或缺实绩的未派单挂具算待测，按最坏情形漏判与额度比对，补测不影响结论时才提前签通过或驳回，补测重算不改原派单和凭证。
 
 [字段和时间窗](docs/SPEC.md) · [模块与回归表](docs/DEPTH.md) · [HTTP 与自备数据](docs/RUNBOOK.md)

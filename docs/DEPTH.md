@@ -16,6 +16,7 @@ AI/ML · 传统ML · 中型
 | M6 | 槽液变化 | 差异定位和外推审查 | `src/platebath/solution_mix/service.py` | `tests/test_solution_mix.py` |
 | M7 | 台面复测 | 硬规则与额度分配 | `src/platebath/retest_bench/service.py` | `tests/test_retest_bench.py` |
 | M8 | 镀层签认 | 单据及额度证据 | `src/platebath/coating_disposition/service.py` | `tests/test_coating_disposition.py` |
+| M9 | 漏判验收 | 晚到实绩、防泄漏与额度裁决 | `src/platebath/acceptance_review/service.py` | `tests/test_acceptance_review.py` |
 
 ## 深度登记
 
@@ -30,3 +31,7 @@ AI/ML · 传统ML · 中型
 | TRAP-44 | 校准样本不足 | 分派前转人工判读并保留原因 | `src/platebath/gauge_bands/service.py` | `tests/test_gauge_bands.py::test_empty_calibration_requires_review` |
 | TRAP-53 | 单条推断与混批 | 复用冻结参数，各条估计完全一致 | `src/platebath/thickness_tree/service.py` | `tests/test_thickness_tree.py::test_input_batch_invariance` |
 | TRAP-54 | 特征版本与模型不配对 | 拒绝继续推断并要求重拟合 | `src/platebath/thickness_tree/service.py` | `tests/test_thickness_tree.py::test_mismatched_model_input_version_fails` |
+| TRAP-61 | 晚到实绩回灌训练 | 验收回执与单据分流，重跑只取签发可见单据并核对 `run_id` | `src/platebath/acceptance_review/service.py` | `tests/test_acceptance_review.py::test_live_outcomes_never_leak_into_training_or_dispatch` |
+| TRAP-62 | 同版实绩冲突被随机选一 | 冲突挂具一律待测并隔离，回执换序不改变验收指纹 | `src/platebath/acceptance_review/service.py` | `tests/test_acceptance_review.py::test_conflicting_same_revision_is_pending_and_order_independent` |
+| TRAP-63 | 待测挂具使漏判可能破额 | 按最坏情形 M+P 裁决，补测不影响结论才提前签通过/驳回 | `src/platebath/acceptance_review/service.py` | `tests/test_acceptance_review.py::test_robust_verdict_worst_case_drives_early_signoff` |
+| TRAP-64 | 补测重算改动原派单 | 验收只追加证据，原 `run_id`、派单和凭证保持不变 | `src/platebath/acceptance_review/service.py` | `tests/test_acceptance_review.py::test_resolving_pending_recomputes_without_touching_dispatch` |

@@ -85,6 +85,16 @@ tr:hover td { background: var(--wash); }
 .state { white-space: nowrap; padding: 2px 5px; border: 1px solid var(--line); border-radius: min(4px, var(--radius)); color: var(--quiet); }
 .state[data-state=已分派] { color: var(--accent); border-color: var(--accent); }
 .state[data-state=暂停] { color: var(--hold-color, #ad4a38); border-color: currentColor; }
+.verdict { display: inline-block; white-space: nowrap; padding: 3px 10px; border-radius: min(6px, var(--radius)); font-weight: 700; border: 1px solid currentColor; }
+.verdict[data-verdict=通过] { color: #23724a; background: #e6f4ec; border-color: #9ccbb1; }
+.verdict[data-verdict=驳回] { color: #ad4a38; background: #f9e9e6; border-color: #d9aaa2; }
+.verdict[data-verdict=待核] { color: #92671d; background: #faf1dc; border-color: #d8bf86; }
+.state[data-state=漏判] { color: #ad4a38; border-color: currentColor; font-weight: 700; }
+.state[data-state=待测] { color: #92671d; border-color: currentColor; }
+.state[data-state=未超线] { color: #23724a; border-color: currentColor; }
+.state[data-state=已拦截复核] { color: var(--accent); border-color: var(--line); }
+.acceptance-banner { margin: 4px var(--pad) 12px; padding: 12px 16px; border-radius: min(8px, var(--radius)); background: var(--wash); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.acceptance-banner p { margin: 0; color: var(--quiet); }
 .detail-note { margin: 0 var(--pad) 10px; }
 .laboratory .record-fields { display: grid; grid-template-columns: max-content minmax(0, 1fr); padding: 8px var(--pad) 12px; gap: 10px 18px; margin: 12px 0 0; }
 .record-fields dt { color: var(--quiet); }

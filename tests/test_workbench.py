@@ -7,9 +7,13 @@ ROUTE = '/api/platebath'
 
 def test_preset_workbench_has_real_business_rows():
     output = app.test_client().get(ROUTE+'/overview').get_json()
-    assert len(output['metrics']) == 5 and len(output['sections']) == 8
+    assert len(output['metrics']) == 5 and len(output['sections']) == 9
     assert len(output['rows']) >= 10
     assert output['model'] == 'CART 槽位厚差回归'
+    acceptance = output['sections'][-1]
+    assert acceptance['key'] == 'acceptance_review'
+    assert acceptance['acceptance']['sealed_run_id'] == output['run_id']
+    assert acceptance['acceptance']['verdict'] in {'通过', '驳回', '待核'}
 
 
 def test_scenario_reallocates_business_capacity():

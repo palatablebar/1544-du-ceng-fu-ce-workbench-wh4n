@@ -9,6 +9,7 @@ from flask.views import MethodView
 from werkzeug.exceptions import BadRequest, UnsupportedMediaType, RequestEntityTooLarge
 
 from .pipeline import DISPLAY, MODULES, execute, open_fixture, preview
+from .acceptance_review.flow import handle_acceptance, open_acceptance_fixture
 
 app=Flask(__name__,static_folder='web/static',template_folder='web/templates')
 app.config['MAX_CONTENT_LENGTH']=1500000
@@ -71,10 +72,24 @@ def too_large(_):
     return {'code':'PAYLOAD_TOO_LARGE','message':'请分开上传多个班次'},413
 
 
-handler=WorkbenchView.as_view('workbench')
-app.add_url_rule('/api/platebath/overview',view_func=handler,methods=['GET'])
-app.add_url_rule('/api/platebath/stages/<stage>',view_func=handler,methods=['GET'])
-app.add_url_rule('/api/platebath/run',view_func=handler,methods=['POST'])
+class AcceptanceView(MethodView):
+    def post(self):
+        try:
+            return handle_acceptance(request.get_json())
+        except (BadRequest, UnsupportedMediaType):
+            return {'code': 'INVALID_JSON', 'message': '无法解析验收回执 JSON'}, 400
+        except ValueError as rejected:
+            return {'code': 'INVALID_BATCH', 'message': str(rejected)}, 422
+        except ArithmeticError as rejected:
+            return {'code': 'SEAL_MISMATCH', 'message': str(rejected)}, 409
+
+
+handler = WorkbenchView.as_view('workbench')
+app.add_url_rule('/api/platebath/overview', view_func=handler, methods=['GET'])
+app.add_url_rule('/api/platebath/stages/<stage>', view_func=handler, methods=['GET'])
+app.add_url_rule('/api/platebath/run', view_func=handler, methods=['POST'])
+app.add_url_rule('/api/platebath/acceptance', view_func=AcceptanceView.as_view('acceptance'),
+                 methods=['POST'])
 
 
 def cli_evaluate(options):
@@ -84,27 +99,46 @@ def cli_evaluate(options):
     return dumps(public_plan(request_data),ensure_ascii=False,indent=2,allow_nan=False)+'\n'
 
 
+def cli_acceptance(options):
+    feed_rows, allowance, _ = open_acceptance_fixture(options.feed)
+    payload = {'feed': feed_rows,
+               'allowance': options.allowance if options.allowance is not None else allowance,
+               'capacity': options.capacity, 'strategy': options.strategy}
+    if options.input:
+        request_data = open_fixture(options.input)
+        payload['records'] = request_data['records']
+        payload['as_of'] = request_data['as_of']
+    return dumps(handle_acceptance(payload), ensure_ascii=False, indent=2, allow_nan=False) + '\n'
+
+
 def main():
-    parser=argparse.ArgumentParser(description=DISPLAY['title'])
-    parser.add_argument('command',choices=('evaluate','serve'))
-    parser.add_argument('--port',type=int,default=8000)
-    parser.add_argument('--capacity',type=int,default=12)
-    parser.add_argument('--strategy',default='balanced')
-    parser.add_argument('--input',type=Path)
-    parser.add_argument('--output',type=Path)
-    options=parser.parse_args()
-    if options.command=='serve':
+    parser = argparse.ArgumentParser(description=DISPLAY['title'])
+    parser.add_argument('command', choices=('evaluate', 'serve', 'acceptance'))
+    parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--capacity', type=int, default=12)
+    parser.add_argument('--strategy', default='balanced')
+    parser.add_argument('--input', type=Path)
+    parser.add_argument('--feed', type=Path)
+    parser.add_argument('--allowance', type=int)
+    parser.add_argument('--output', type=Path)
+    options = parser.parse_args()
+    if options.command == 'serve':
         from waitress import serve
         preview()
-        serve(app,host='0.0.0.0',port=options.port,threads=4)
+        serve(app, host='0.0.0.0', port=options.port, threads=4)
         return
     try:
-        rendered=cli_evaluate(options)
-        if options.output:
-            options.output.write_text(rendered,encoding='utf-8')
+        if options.command == 'acceptance':
+            if options.feed is None:
+                parser.error('验收需要 --feed 晚到实绩文件')
+            rendered = cli_acceptance(options)
         else:
-            print(rendered,end='')
-    except (ValueError,OSError) as rejected:
+            rendered = cli_evaluate(options)
+        if options.output:
+            options.output.write_text(rendered, encoding='utf-8')
+        else:
+            print(rendered, end='')
+    except (ValueError, OSError) as rejected:
         parser.error(str(rejected))
 
 

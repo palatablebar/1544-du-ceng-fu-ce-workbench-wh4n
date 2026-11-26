@@ -10,6 +10,7 @@ const visibleOrder = ['key','zone','estimate','state','cost'];
 let ledger;
 let focus = 6;
 let currentItem;
+let currentFeed = null;
 
 function valueOf(item) {
     if (item === null || item === undefined || item === '') return '—';
@@ -73,6 +74,33 @@ function showTables(target, records, options={}) {
     for (const group of groups.values()) target.append(rowsTable(group,Object.keys(group[0]),options));
 }
 
+function acceptancePanel(card, panel) {
+    const data = panel.acceptance;
+    const banner = node('div', undefined, 'acceptance-banner');
+    const verdict = node('span', data.verdict, 'verdict');
+    verdict.dataset.verdict = data.verdict;
+    banner.append(verdict, node('p', data.reasoning));
+    card.append(banner);
+    const tallyRows = Object.entries(data.tally).map(([name, value]) => ({统计项: name, 数量: value}));
+    card.append(node('h3', '漏判计数', 'inner-heading'));
+    showTables(card, tallyRows);
+    card.append(node('h3', '逐单验收依据', 'inner-heading'));
+    const gradeRows = data.grades.map(item => ({...item, 定性: item.定性}));
+    const table = rowsTable(gradeRows, ['单号','作业区','签发处置','预测厚差','晚到实绩μm','实绩工日','定性','依据']);
+    table.querySelectorAll('tbody tr').forEach((line, index) => {
+        const badge = line.children[6];
+        badge.replaceChildren();
+        const pill = node('span', gradeRows[index].定性, 'state');
+        pill.dataset.state = gradeRows[index].定性;
+        badge.append(pill);
+    });
+    card.append(table);
+    if (data.outside_keys?.length) {
+        card.append(node('h3', '非当班对象（不计入验收）', 'inner-heading'));
+        showTables(card, data.outside_keys.map(key => ({单号: key})));
+    }
+}
+
 function renderMeasurements(card, row) {
     const labels = ledger.measures;
     const snapshot = node('dl',undefined,'record-fields');
@@ -128,6 +156,10 @@ function showDetail() {
             if (ticket) inspect(ticket);
         }});
         card.append(plan);
+    }
+    if (panel.key === 'acceptance_review' && panel.acceptance) {
+        acceptancePanel(card, panel);
+        return;
     }
     showTables(card,panel.records);
     if (panel.errors.length > 0) {
@@ -262,6 +294,7 @@ byId('restore').addEventListener('click',async () => {
     try {
         const refreshed = await requestResult('/overview');
         currentBatch = null;
+        currentFeed = null;
         byId('source-label').textContent = '随附样例';
         reset.hidden = true;
         redraw(refreshed);
@@ -270,6 +303,39 @@ byId('restore').addEventListener('click',async () => {
         appendStatus(error.message,true);
     } finally {
         reset.disabled = false;
+    }
+});
+byId('feed-file').addEventListener('change',async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+        if (file.size > 1450000) throw new Error('请导入小于 1.45 MB 的验收回执文件');
+        const incoming = JSON.parse(await file.text());
+        if (!incoming || !Array.isArray(incoming.records)) throw new Error('验收文件须包含 records 数组');
+        const payload = {feed: incoming.records,
+            allowance: incoming.allowance ?? 3,
+            capacity: ledger?.capacity ?? 12, strategy: ledger?.mode ?? 'balanced'};
+        if (currentBatch?.records) {
+            payload.records = currentBatch.records;
+            payload.as_of = currentBatch.as_of;
+        }
+        const result = await requestResult('/acceptance',{method:'POST',
+            headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        currentFeed = incoming;
+        const stage = ledger.sections.find(section => section.key === 'acceptance_review');
+        if (stage) {
+            stage.summary = `${result.verdict} · ${result.reasoning}`;
+            stage.acceptance = result;
+            stage.records = result.summary.map(item => ({'验收依据': item['核对项'], '内容': item['数量']}));
+            stage.records.push(...result.grades);
+            stage.errors = result.errors;
+        }
+        if (focus === 8 || (stage && ledger.sections[focus] === stage)) showDetail();
+        appendStatus(`验收${result.verdict}：${result.reasoning}`);
+    } catch (error) {
+        appendStatus(error.message,true);
+    } finally {
+        event.target.value = '';
     }
 });
 prepare();

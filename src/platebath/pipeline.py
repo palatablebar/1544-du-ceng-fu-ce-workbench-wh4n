@@ -10,9 +10,12 @@ from .gauge_bands import service as calibration_service
 from .solution_mix import service as monitor_service
 from .retest_bench import service as dispatch_service
 from .coating_disposition import service as audit_service
+from .acceptance_review import service as acceptance_service
+from .acceptance_review.flow import open_acceptance_fixture
 from .bath_lots import contracts as window_contract
 
 PRESET = Path(__file__).resolve().parents[2] / 'sample_data' / 'hanger_tickets_sample.json'
+ACCEPTANCE_PRESET = Path(__file__).resolve().parents[2] / 'sample_data' / 'acceptance_feed_sample.json'
 MODULES = (('hanger_tickets', '挂具批录入'),
  ('bath_lots', '槽液批窗'),
  ('deposit_factors', '浸镀因素'),
@@ -20,7 +23,8 @@ MODULES = (('hanger_tickets', '挂具批录入'),
  ('gauge_bands', '测厚核验'),
  ('solution_mix', '槽液变化'),
  ('retest_bench', '台面复测'),
- ('coating_disposition', '镀层签认'))
+ ('coating_disposition', '镀层签认'),
+ ('acceptance_review', '漏判验收'))
 DISPLAY = {'title': '镀层复测工作台',
  'object_name': '挂具批',
  'unit': 'μm',
@@ -79,6 +83,24 @@ def comparison_rows(predictions):
 def replay_metrics(report):
     result = [{'label': '回放实绩样本', 'value': report.count}, {'label': '回放绝对误差', 'value': report.mae}]
     return result
+
+
+def acceptance_stage(report, *, feed_path=ACCEPTANCE_PRESET):
+    """用随附晚到实绩对已签发班次做漏判验收，只追加证据，不改原派单。"""
+    feed_rows, allowance, _ = open_acceptance_fixture(feed_path)
+    review = acceptance_service.review_shift(report, feed_rows, allowance)
+    payload = acceptance_service.acceptance_payload(review)
+    headline = (f'{review.verdict} · 已确认漏判 {review.confirmed_misses} / 额度 {review.allowance}'
+                f' · 待测 {review.pending} 张')
+    records = [{'验收依据': item['核对项'], '内容': item['数量']} for item in payload['summary']]
+    records.extend(payload['grades'])
+    issues = [{'行号': issue.source_row, '单号': issue.key, '字段': issue.field, '原因': issue.code}
+              for issue in review.issues]
+    for key in review.outside:
+        issues.append({'行号': '-', '单号': key, '字段': 'key', '原因': 'NOT_SEALED_LIVE'})
+    stage = stage_at(8, headline, records, issues)
+    stage['acceptance'] = payload
+    return stage
 
 
 class ShiftDossier:
@@ -179,6 +201,7 @@ def execute(documents, capacity=12, mode='balanced', *, as_of=96):
  'area_dm': ('挂件总面积', 'dm²'),
  'filter_days': ('溶液滤芯使用', '天'),
  'bath_c': ('槽液温度', '℃')}, 'metrics': overview, 'performance': replay_metrics(performance), 'rows': row_list, 'series': points}
+    overview_report['sections'].append(acceptance_stage(overview_report))
     return overview_report
 
 

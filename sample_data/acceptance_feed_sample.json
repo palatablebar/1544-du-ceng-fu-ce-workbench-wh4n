@@ -1,0 +1,23 @@
+{
+  "as_of": 96,
+  "allowance": 3,
+  "note": "晚到实绩仅用于当班漏判验收，不进入训练、预测和派单。result_day 早于或等于截止日的回执也只作验收标签。",
+  "records": [
+    {"key": "PL-1259", "revision": 1, "result_day": 97, "received": 98, "outcome": 3.0521},
+    {"key": "PL-1260", "revision": 1, "result_day": 98, "received": 99, "outcome": 2.7418},
+    {"key": "PL-1263", "revision": 1, "result_day": 97, "received": 98, "outcome": 1.8422},
+    {"key": "PL-1264", "revision": 1, "result_day": 99, "received": 100, "outcome": 1.2105},
+    {"key": "PL-1266", "revision": 1, "result_day": 99, "received": 100, "outcome": 1.553},
+    {"key": "PL-1267", "revision": 1, "result_day": 100, "received": 101, "outcome": 2.4077},
+    {"key": "PL-1268", "revision": 1, "result_day": 100, "received": 101, "outcome": 2.0114},
+    {"key": "PL-1269", "revision": 1, "result_day": 98, "received": 99, "outcome": 1.9036},
+    {"key": "PL-1270", "revision": 1, "result_day": 101, "received": 102, "outcome": 1.3372},
+    {"key": "PL-1271", "revision": 1, "result_day": 101, "received": 102, "outcome": 2.1849},
+    {"key": "PL-1272", "revision": 1, "result_day": 99, "received": 100, "outcome": 2.2651},
+    {"key": "PL-1272", "revision": 2, "result_day": 102, "received": 103, "outcome": 2.914},
+    {"key": "PL-1272", "revision": 2, "result_day": 102, "received": 103, "outcome": 1.745},
+    {"key": "PL-1273", "revision": 1, "result_day": 100, "received": 101, "outcome": 2.612},
+    {"key": "PL-1273", "revision": 2, "result_day": 103, "received": 104, "outcome": null, "observed": false},
+    {"key": "PL-1101", "revision": 1, "result_day": 99, "received": 100, "outcome": 2.05}
+  ]
+}
